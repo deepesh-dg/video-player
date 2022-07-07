@@ -18,7 +18,9 @@ type btn = {
 };
 
 class VideoPlayer {
-    private cssUrl = "http://127.0.0.1:3000/static/css/style.css";
+    // private cssUrl = "http://127.0.0.1:3000/static/css/video-player.css";
+    private cssUrl =
+        "https://res.cloudinary.com/deepeshgupta/raw/upload/v1657209347/deepeshgupta/video-player/css/video-player_djqlym.css";
     private classNames = {
         videoContainer: "deepeshdg-video-container",
         videoControlsContainer: "deepeshdg-video-controls-container",

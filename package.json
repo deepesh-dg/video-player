@@ -18,7 +18,7 @@
         "publisher": "npm-run-all prepublish publish postpublish",
         "run-test": "nodemon ./test/index.js",
         "test": "npm-run-all build run-test",
-        "build:scss": "node-sass -r --output-style compressed src/scss/style.scss -o dist/css",
+        "build:scss": "node-sass -r --output-style compressed src/scss/video-player.scss -o dist/css",
         "watch:scss": "npm run build:scss && npm run build:scss -- -w"
     },
     "repository": {
