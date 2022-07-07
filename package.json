@@ -1,0 +1,44 @@
+{
+    "name": "video-player",
+    "version": "0.0.1",
+    "description": "a frontend optimized video player",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "clean": "rimraf dist/*",
+        "lint": "eslint ./src --ext .ts",
+        "tsc": "tsc",
+        "build": "npm-run-all clean lint tsc",
+        "start": "npm-run-all build",
+        "start:dev": "npm-run-all build start",
+        "dev": "nodemon --watch src -e ts,mts --exec npm run start:dev",
+        "prepublish": "npm-run-all build",
+        "publish": "npm publish --access-public",
+        "postpublish": "npm-run-all clean",
+        "publisher": "npm-run-all prepublish publish postpublish"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/PrinceDeepu/video-player.git"
+    },
+    "keywords": [
+        "videoplayer",
+        "frontendvideoplayer",
+        "webvideoplayer"
+    ],
+    "author": "Deepesh Gupta",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/PrinceDeepu/video-player/issues"
+    },
+    "homepage": "https://github.com/PrinceDeepu/video-player#readme",
+    "devDependencies": {
+        "@types/node": "^18.0.3",
+        "@typescript-eslint/eslint-plugin": "^5.30.5",
+        "@typescript-eslint/parser": "^5.30.5",
+        "eslint": "^8.19.0",
+        "npm-run-all": "^4.1.5",
+        "rimraf": "^3.0.2",
+        "typescript": "^4.7.4"
+    }
+}
