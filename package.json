@@ -1,6 +1,6 @@
 {
     "name": "@deepeshgupta/video-player",
-    "version": "0.0.12",
+    "version": "0.0.121",
     "description": "a frontend optimized video player",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
         "start": "npm-run-all build",
         "start:dev": "npm-run-all build start",
         "dev": "nodemon --watch src -e ts,mts --exec npm run start:dev",
-        "prepublish": "npm-run-all build",
+        "prepublish": "npm-run-all build build:scss",
         "publish": "npm publish --access=public",
         "postpublish": "npm-run-all clean",
         "publisher": "npm-run-all prepublish publish postpublish",
