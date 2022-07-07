@@ -26,3 +26,6 @@ env/
 
 # distribution Files
 dist/
+
+# Video
+*.mp4
