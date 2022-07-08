@@ -1,6 +1,6 @@
 {
     "name": "@deepeshgupta/video-player",
-    "version": "0.0.122",
+    "version": "0.0.2",
     "description": "a frontend optimized video player",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -8,7 +8,7 @@
         "clean": "rimraf dist/*",
         "lint": "eslint ./src --ext .ts",
         "tsc": "tsc",
-        "build": "npm-run-all clean lint tsc",
+        "build": "npm-run-all clean lint tsc build:scss",
         "start": "npm-run-all build",
         "start:dev": "npm-run-all build start",
         "dev": "nodemon --watch src -e ts,mts --exec npm run start:dev",

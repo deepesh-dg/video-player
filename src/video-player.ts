@@ -1,32 +1,58 @@
 type BaseVideoPlayerOptions = {
     videoContainer?: HTMLDivElement;
-    initialPaused?: boolean;
+    initialPlay?: boolean;
+    initialMuted?: boolean;
+    loop?: boolean;
 };
 
 type VideoPlayerOptions = BaseVideoPlayerOptions & {
     video: HTMLVideoElement;
 };
 
-type btn = {
+type Btn = {
     playPause?: HTMLElement | null;
     volume?: {
-        mute?: HTMLElement | null;
-        slider?: HTMLInputElement | null;
+        mute: HTMLElement | null;
+        slider: HTMLInputElement | null;
     };
     fullScreen?: HTMLElement | null;
     speed?: HTMLElement | null;
+    duration?: {
+        currentTime: HTMLElement | null;
+        totalTime: HTMLElement | null;
+    };
+    timeline?: HTMLInputElement | null;
+};
+
+type Events = {
+    loadedData: Event;
+    play: Event;
+    pause: Event;
+    mute: Event;
+    unmute: Event;
+    volume: Event;
+    fullScreenIn: Event;
+    fullScreenOut: Event;
+    timeUpdate: Event;
+    playbackSpeed: Event;
+    // caption: Event;
+    // pictureInPicture: Event;
 };
 
 class VideoPlayer {
-    // private cssUrl = "http://127.0.0.1:3000/static/css/video-player.css";
-    private cssUrl =
-        "https://res.cloudinary.com/deepeshgupta/raw/upload/v1657209347/deepeshgupta/video-player/css/video-player_djqlym.css";
-    private classNames = {
+    /**
+     * Frontend Assets
+     */
+    private readonly cssUrl =
+        "http://127.0.0.1:3000/static/css/video-player.css";
+    // private cssUrl =
+    //     "https://res.cloudinary.com/deepeshgupta/raw/upload/v1657291058/deepeshgupta/video-player/css/video-player-0.0.2_ay1xo5.js";
+    private readonly classNames = {
         videoContainer: "deepeshdg-video-container",
         videoControlsContainer: "deepeshdg-video-controls-container",
         focusBtn: "focus-btn",
     };
-    private icons = {
+    private readonly icons = {
         play: `
             <svg class="play-icon" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
@@ -68,89 +94,314 @@ class VideoPlayer {
         },
     };
 
+    /**
+     * Properties of necessary DOM Elements
+     */
     private video: HTMLVideoElement;
     private videoContainer?: HTMLDivElement | null;
     private videoControlsContainer?: HTMLDivElement | null;
-    private btn: btn = {};
+    private btn: Btn = {};
 
-    private _isPaused = true;
-    private _isMuted = false;
-    private _isFullScreen = false;
+    /**
+     * Metadata of Video
+     */
+    private isPaused = true;
+    private isMuted = false;
+    private isFullScreen = false;
+    private volume = 1;
+    private currentTime = 0;
+    private totalTime?: number;
 
-    private initialPaused: boolean;
+    /**
+     * Custom Events
+     */
+    private events: Events;
+
+    /**
+     * Initial State of Video
+     */
+    private initialPlay: boolean;
+    private initialMuted: boolean;
+    private loop: boolean;
 
     constructor(options: VideoPlayerOptions) {
         this.video = options.video;
         this.videoContainer = options.videoContainer;
-        this.initialPaused = options.initialPaused ?? true;
+        this.initialPlay = options.initialPlay ?? false;
+        this.initialMuted = options.initialMuted ?? false;
+        this.loop = options.loop ?? false;
+
+        /**
+         * Creating Custom Events
+         */
+        this.events = {
+            loadedData: new CustomEvent("loadeddata"),
+            play: new CustomEvent("play"),
+            pause: new CustomEvent("pause"),
+            mute: new CustomEvent("mute"),
+            unmute: new CustomEvent("unmute"),
+            volume: new CustomEvent("volume"),
+            timeUpdate: new CustomEvent("timeupdate"),
+            fullScreenIn: new CustomEvent("fullscreenin"),
+            fullScreenOut: new CustomEvent("fullscreenout"),
+            playbackSpeed: new CustomEvent("playbackspeed"),
+        };
     }
 
-    get isPaused(): boolean {
-        return this._isPaused;
+    public on(
+        eventName:
+            | "loadeddata"
+            | "play"
+            | "pause"
+            | "mute"
+            | "unmute"
+            | "volume"
+            | "timeupdate"
+            | "fullscreenin"
+            | "fullscreenout"
+            | "playbackspeed",
+        listener: (e: Event) => void
+    ) {
+        this.videoContainer?.addEventListener(eventName, listener);
     }
 
-    get isMuted(): boolean {
-        return this._isMuted;
+    public registerCustomEvents() {
+        this.on("loadeddata", () => {
+            this.totalTime = this.video.duration;
+
+            if (this.btn.duration?.currentTime)
+                this.btn.duration.currentTime.textContent =
+                    this.getCurrentTime();
+            if (this.btn.duration?.totalTime)
+                this.btn.duration.totalTime.textContent = this.getTotalTime();
+
+            if (this.currentTime && this.totalTime && this.btn.timeline) {
+                this.btn.timeline.value = (
+                    (this.currentTime / this.totalTime) *
+                    100
+                ).toString();
+            }
+        });
+
+        this.on("play", (e) => {
+            const videoContainer = e.target as HTMLDivElement;
+            videoContainer.classList.remove("paused");
+
+            if (this.currentTime === this.totalTime && this.loop)
+                this.currentTime = 0;
+
+            if (this.video.paused) this.video.play();
+            this.isPaused = this.video.paused;
+        });
+
+        this.on("pause", (e) => {
+            const videoContainer = e.target as HTMLDivElement;
+            videoContainer.classList.add("paused");
+
+            if (!this.video.paused) this.video.pause();
+            this.isPaused = this.video.paused;
+        });
+
+        this.on("mute", () => {
+            this.volumeLevel("muted");
+            if (!this.video.muted) this.video.muted = true;
+            this.isMuted = this.video.muted;
+        });
+
+        this.on("unmute", () => {
+            if (this.volume <= 0)
+                this.volume =
+                    Number(this.btn.volume?.slider?.value) > 0
+                        ? Number(this.btn.volume?.slider?.value)
+                        : 0;
+
+            if (this.video.muted) this.video.muted = false;
+            this.isMuted = this.video.muted;
+        });
+
+        this.on("volume", () => {
+            if (this.volume < 0) {
+                this.video.volume = 0;
+                this.volume = this.video.volume;
+            }
+
+            if (this.volume === 0) {
+                this.mute();
+                /**
+                 * Assigning Volume Value to Input Range to reflect in Frontend
+                 */
+                if (this.btn.volume?.slider)
+                    this.btn.volume.slider.value = this.volume.toString();
+                return;
+            }
+
+            if (this.video.muted) this.unmute();
+
+            if (this.volume > 1) this.volume = 1;
+
+            this.video.volume = this.volume;
+            if (this.volume <= 0.5) this.volumeLevel("low");
+            else this.volumeLevel("high");
+
+            /**
+             * Assigning Volume Value to Input Range to reflect in Frontend
+             */
+            if (this.btn.volume?.slider)
+                this.btn.volume.slider.value = this.volume.toString();
+        });
+
+        this.on("timeupdate", () => {
+            if (this.currentTime < 0) this.currentTime = 0;
+            if (this.totalTime && this.currentTime > this.totalTime) {
+                if (this.loop) this.currentTime = 0;
+                else this.currentTime = this.totalTime;
+            }
+
+            if (Math.abs(this.currentTime - this.video.currentTime) >= 1)
+                this.video.currentTime = this.currentTime;
+            else this.currentTime = this.video.currentTime;
+
+            this.trigger("loadeddata");
+        });
+
+        this.on("fullscreenin", (e) => {
+            const videoContainer = e.target as HTMLDivElement;
+            if (!document.fullscreenElement) videoContainer.requestFullscreen();
+            this.isFullScreen = true;
+            videoContainer.classList.add("fullscreen");
+        });
+
+        this.on("fullscreenout", (e) => {
+            const videoContainer = e.target as HTMLDivElement;
+            if (document.fullscreenElement) document.exitFullscreen();
+            this.isFullScreen = false;
+            videoContainer.classList.remove("fullscreen");
+        });
     }
 
-    get isFullScreen(): boolean {
-        return this._isFullScreen;
+    public trigger(
+        eventName:
+            | "loadeddata"
+            | "play"
+            | "pause"
+            | "mute"
+            | "unmute"
+            | "volume"
+            | "timeupdate"
+            | "fullscreenin"
+            | "fullscreenout"
+            | "playbackspeed"
+    ) {
+        let event: Event;
+
+        switch (eventName) {
+            case "loadeddata":
+                event = this.events.loadedData;
+                break;
+            case "play":
+                event = this.events.play;
+                break;
+            case "pause":
+                event = this.events.pause;
+                break;
+            case "mute":
+                event = this.events.mute;
+                break;
+            case "unmute":
+                event = this.events.unmute;
+                break;
+            case "volume":
+                event = this.events.volume;
+                break;
+            case "timeupdate":
+                event = this.events.timeUpdate;
+                break;
+            case "fullscreenin":
+                event = this.events.fullScreenIn;
+                break;
+            case "fullscreenout":
+                event = this.events.fullScreenOut;
+                break;
+            case "playbackspeed":
+                event = this.events.playbackSpeed;
+                break;
+            default:
+                return;
+                break;
+        }
+
+        this.videoContainer?.dispatchEvent(event);
     }
 
-    public play(event = false) {
-        this._isPaused = false;
-        this.videoContainer?.classList.remove("paused");
-        if (!event) this.video.play();
+    public getCurrentTime() {
+        return this.formatDuration(this.currentTime);
     }
 
-    public pause(event = false) {
-        this._isPaused = true;
-        this.videoContainer?.classList.add("paused");
-        if (!event) this.video.pause();
+    public getTotalTime() {
+        return this.formatDuration(this.totalTime ?? 0);
+    }
+
+    public skip(howMuch: number) {
+        this.currentTime += howMuch;
+        this.trigger("timeupdate");
+    }
+
+    public formatDuration(time: number): string {
+        const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
+            minimumIntegerDigits: 2,
+        });
+
+        const seconds = Math.floor(time) % 60;
+        const minutes = Math.floor(time / 60) % 60;
+        const hours = Math.floor(time / 3600);
+
+        if (hours === 0)
+            return `${minutes}:${leadingZeroFormatter.format(seconds)}`;
+
+        return `${hours}:${leadingZeroFormatter.format(
+            minutes
+        )}:${leadingZeroFormatter.format(seconds)}`;
+    }
+
+    public play() {
+        this.trigger("play");
+    }
+
+    public pause() {
+        this.trigger("pause");
     }
 
     public volumeLevel(level: "low" | "high" | "muted") {
         this.videoContainer?.setAttribute("data-volume-level", level);
     }
 
-    public setVolume(volume: number) {
-        if (volume > 0 && volume <= 1) {
-            this.video.volume = volume;
-            if (volume < 0.5) this.volumeLevel("low");
-            else this.volumeLevel("high");
-        } else if (volume <= 0) {
-            this.video.volume = 0;
-            this.mute();
-        } else if (volume > 1) this.setVolume(1);
+    public setVolume(volume: number, percent = false) {
+        if (percent) {
+            let volumeInPercent = Math.floor(this.volume * 100);
 
-        if (this.video.volume > 0) this.unmute(true);
+            volumeInPercent -= volumeInPercent % 5;
+
+            volumeInPercent += volume;
+
+            this.volume = Math.floor(volumeInPercent) / 100;
+        } else this.volume = volume < 0 ? 0 : volume;
+        this.trigger("volume");
     }
 
-    public mute(event = false) {
-        this.volumeLevel("muted");
-        if (!event) this.video.muted = true;
-        this._isMuted = this.video.muted;
+    public mute() {
+        this.trigger("mute");
     }
 
-    public unmute(event = false) {
-        if (!event) {
-            const currentVolume = Number(this.btn.volume?.slider?.value) ?? 0;
-            this.setVolume(currentVolume);
-        }
-        this.video.muted = false;
-        this._isMuted = this.video.muted;
+    public unmute() {
+        this.trigger("unmute");
     }
 
-    public enterFullScreen(event = false) {
-        if (!event) this.videoContainer?.requestFullscreen();
-        this._isFullScreen = true;
-        this.videoContainer?.classList.add("fullscreen");
+    public enterFullScreen() {
+        this.trigger("fullscreenin");
     }
 
-    public exitFullScreen(event = false) {
-        if (!event) document.exitFullscreen();
-        this._isFullScreen = false;
-        this.videoContainer?.classList.remove("fullscreen");
+    public exitFullScreen() {
+        this.trigger("fullscreenout");
     }
 
     public togglePlay() {
@@ -165,9 +416,9 @@ class VideoPlayer {
         this.isFullScreen ? this.exitFullScreen() : this.enterFullScreen();
     }
 
-    public initialPlay() {
-        if (this.initialPaused) this.pause();
-        else this.play();
+    public autoPlay() {
+        if (this.initialPlay) this.play();
+        else this.pause();
     }
 
     private async _init() {
@@ -213,24 +464,37 @@ class VideoPlayer {
             this.videoControlsContainer.innerHTML = `
                 <div class="mouse-event-zone"></div>
                 <div class="controllers">
-                    <div class="timeline-controller"></div>
+                    <div class="timeline-controller">
+                        <input class="timeline-slider" type="range" min="0" max="100" step="any" value="0"/>
+                    </div>
                     <div class="controls">
                         <div class="left">
-                            <button class="icon-btn play-pause-btn">${this.icons.play}${this.icons.pause}</button>
+                            <div class="play-pause-btn-container">
+                                <button class="icon-btn play-pause-btn">${
+                                    this.icons.play
+                                }${this.icons.pause}</button>
+                            </div>
                             <div class="volume-container">
                                 <button class="icon-btn mute-btn">
                                     ${this.icons.volume.high}
                                     ${this.icons.volume.low}
                                     ${this.icons.volume.muted}
                                 </button>
-                                <input class="volume-slider" type="range" min="0" max="1" step="any" value="1">
+                                <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="1"/>
+                            </div>
+                            <div class="duration-container">
+                                <div class="current-time">${this.getCurrentTime()}</div>
+                                /
+                                <div class="total-time">${this.getTotalTime()}</div>
                             </div>
                         </div>
                         <div class="right">
-                            <button class="icon-btn fullscreen-btn">
-                                ${this.icons.fullscreen.open}
-                                ${this.icons.fullscreen.close}
-                            </button>
+                            <div class="fullscreen-btn-container">
+                                <button class="icon-btn fullscreen-btn">
+                                    ${this.icons.fullscreen.open}
+                                    ${this.icons.fullscreen.close}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -248,9 +512,25 @@ class VideoPlayer {
                 ),
             };
 
+            this.btn.duration = {
+                currentTime:
+                    this.videoControlsContainer.querySelector<HTMLElement>(
+                        ".current-time"
+                    ),
+                totalTime:
+                    this.videoControlsContainer.querySelector<HTMLElement>(
+                        ".total-time"
+                    ),
+            };
+
             this.btn.fullScreen =
                 this.videoControlsContainer.querySelector<HTMLElement>(
                     `.icon-btn.fullscreen-btn`
+                );
+
+            this.btn.timeline =
+                this.videoControlsContainer.querySelector<HTMLInputElement>(
+                    ".timeline-slider"
                 );
 
             this.videoContainer?.appendChild(this.videoControlsContainer);
@@ -262,9 +542,6 @@ class VideoPlayer {
     }
 
     public async run() {
-        await this._init();
-        this.initialPlay();
-
         const mouseEvents = () => {
             this.videoControlsContainer
                 ?.querySelector(`.controllers`)
@@ -306,8 +583,14 @@ class VideoPlayer {
 
             this.btn.volume?.slider?.addEventListener("input", (e) => {
                 const target = e.target as HTMLInputElement;
-
                 this.setVolume(Number(target.value));
+            });
+
+            this.btn.timeline?.addEventListener("input", (e) => {
+                const target = e.target as HTMLInputElement;
+                this.currentTime =
+                    (Number(this.totalTime) * Number(target.value)) / 100;
+                this.trigger("timeupdate");
             });
 
             this.btn.fullScreen?.addEventListener("click", () =>
@@ -316,7 +599,7 @@ class VideoPlayer {
         };
 
         const keyboardEvents = () => {
-            document.body.addEventListener("keypress", (ev) => {
+            document.body.addEventListener("keydown", (ev) => {
                 const noEventTags = ["input", "textarea", "select"];
                 const noEventClass = [""];
                 const activeTag =
@@ -330,8 +613,10 @@ class VideoPlayer {
                 }
 
                 const activeVideoValidate = (): boolean => {
-                    if (this.videoContainer?.contains(document.activeElement))
+                    if (this.videoContainer?.contains(document.activeElement)) {
+                        ev.preventDefault();
                         return true;
+                    }
                     return false;
                 };
 
@@ -346,6 +631,24 @@ class VideoPlayer {
                     case "k":
                         if (activeVideoValidate()) this.togglePlay();
                         break;
+                    case "j":
+                        if (activeVideoValidate()) this.skip(-10);
+                        break;
+                    case "l":
+                        if (activeVideoValidate()) this.skip(10);
+                        break;
+                    case "arrowleft":
+                        if (activeVideoValidate()) this.skip(-5);
+                        break;
+                    case "arrowright":
+                        if (activeVideoValidate()) this.skip(5);
+                        break;
+                    case "arrowup":
+                        if (activeVideoValidate()) this.setVolume(5, true);
+                        break;
+                    case "arrowdown":
+                        if (activeVideoValidate()) this.setVolume(-5, true);
+                        break;
                     case "f":
                         if (activeVideoValidate()) this.toggleFullScreen();
                         break;
@@ -359,26 +662,35 @@ class VideoPlayer {
         };
 
         const videoEvents = () => {
-            this.video.addEventListener("play", () => this.play());
-            this.video.addEventListener("pause", () => this.pause());
-            this.video.addEventListener("volumechange", () => {
-                if (this.video.muted) {
-                    this.mute(true);
+            this.video.onloadeddata = () => this.trigger("loadeddata");
+            this.video.ontimeupdate = () => this.trigger("timeupdate");
+            this.video.onplay = () => this.play();
+            this.video.onpause = () => this.pause();
+            this.video.addEventListener("volumechange", (e) => {
+                const video = e.target as HTMLVideoElement;
+
+                if (video.muted) {
+                    this.mute();
                     return;
                 }
-                if (!this.video.muted) this.unmute(true);
-                this.setVolume(this.video.volume);
+                this.unmute();
+                this.setVolume(video.volume);
             });
             document.addEventListener("fullscreenchange", () => {
-                if (document.fullscreenElement) this.enterFullScreen(true);
-                else this.exitFullScreen(true);
+                if (document.fullscreenElement) this.enterFullScreen();
+                else this.exitFullScreen();
             });
         };
+
+        await this._init();
+        this.registerCustomEvents();
 
         mouseEvents();
         keyboardEvents();
         controllersEvents();
         videoEvents();
+
+        this.autoPlay();
 
         return this;
     }

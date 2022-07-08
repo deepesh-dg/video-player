@@ -1,9 +1,13 @@
+:root {
+    --deepeshdg-primary: #ff0000;
+}
+
 .deepeshdg-video-container {
     position: relative;
     width: 100%;
     display: flex;
     flex-wrap: wrap;
-    background-color: #000000;
+    background-color: #ffffff;
 
     .deepeshdg-video-controls-container {
         position: absolute;
@@ -40,8 +44,7 @@
         }
 
         .controllers {
-            padding: 6px 8px;
-            padding-top: 5%;
+            padding: 16px 16px;
             position: absolute;
             bottom: 0%;
             left: 0%;
@@ -55,6 +58,10 @@
                 .left,
                 .right {
                     display: flex;
+
+                    > * {
+                        margin: 0px 4px;
+                    }
                 }
 
                 .left {
@@ -68,28 +75,108 @@
 
             .icon-btn {
                 background-color: transparent;
-                margin: 0px;
-                padding: 0px;
+                margin: 4px 0px;
+                padding: 8px;
                 color: inherit;
-                width: 30px;
-                height: 30px;
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                font-size: 1rem;
+                font-size: 1.1rem;
                 border: none;
                 outline: none;
-                margin: 4px 6px;
                 opacity: 0.8;
                 transition: 200ms ease-in;
 
-                &:hover {
+                &:hover,
+                &:focus,
+                &:focus-within {
                     opacity: 1;
+                    background-color: rgba(60, 64, 67, 0.3);
+                }
+            }
+
+            input[type="range"] {
+                -webkit-appearance: none;
+                background: transparent;
+                position: relative;
+                overflow: hidden;
+                height: 10px;
+                margin: auto;
+                border-radius: 10px;
+                cursor: pointer;
+
+                &::-webkit-slider-runnable-track {
+                    background: #ddd;
+                    height: 2px;
+                }
+
+                &::-moz-range-track {
+                    background: #ddd;
+                }
+
+                &::-webkit-slider-thumb {
+                    box-shadow: 0px 0px 0px #000000;
+                    border: 0px solid #000000;
+                    height: 14px;
+                    width: 20px;
+                    border-radius: 12px;
+                    background: #fff;
+                    box-shadow: -5000px 0px 0px 4990px var(--deepeshdg-primary);
+                    transform: translateY(-6px);
+                    cursor: pointer;
+                    -webkit-appearance: none;
+                }
+
+                &::-moz-range-thumb {
+                    box-shadow: 0px 0px 0px #000000;
+                    border: 0px solid #000000;
+                    height: 14px;
+                    width: 20px;
+                    border-radius: 12px;
+                    background: #fff;
+                    box-shadow: -5000px 0px 0px 4990px var(--deepeshdg-primary);
+                    cursor: pointer;
+                }
+            }
+
+            .timeline-controller {
+                padding: 0rem 12px;
+
+                .timeline-slider {
+                    width: 100%;
+                    height: 5px;
+
+                    &::-webkit-slider-runnable-track {
+                        height: 1px;
+                    }
+
+                    &::-webkit-slider-thumb {
+                        height: 6px;
+                        width: 16px;
+                        border-radius: 6px;
+                        transform: translateY(-2.5px);
+                    }
+
+                    &::-moz-range-thumb {
+                        box-shadow: 0px 0px 0px #000000;
+                        border: 0px solid #000000;
+                        height: 6px;
+                        width: 16px;
+                        border-radius: 6px;
+                        background: #fff;
+                        box-shadow: -5000px 0px 0px 4990px
+                            var(--deepeshdg-primary);
+                        cursor: pointer;
+                    }
                 }
             }
 
             .volume-container {
                 display: flex;
+                align-items: center;
 
                 .volume {
                     &-high-icon,
@@ -106,6 +193,7 @@
                     transform: scaleX(0);
                     transition: 200ms transform;
                     transition: 300ms all;
+                    margin: 0px 4px;
 
                     &:focus-within {
                         transform: scaleX(1);
@@ -119,6 +207,14 @@
                         width: 100px;
                     }
                 }
+            }
+
+            .duration-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 4px;
+                flex-grow: 1;
             }
         }
     }
@@ -135,6 +231,8 @@
         width: 100%;
         max-width: initial;
         height: 100vh;
+        background-color: #000000;
+
         .deepeshdg-video-controls-container {
             .controllers {
                 .fullscreen-btn {

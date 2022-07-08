@@ -1,7 +1,8 @@
 var videos;
 (async () => {
     videos = await window.deepeshdg.videoPlayer({
-        videos: document.querySelectorAll(".video"),
-        initialPaused: true,
+        video: document.querySelector(".video"),
+        // initialPlay: true,
+        loop: true,
     });
 })();
