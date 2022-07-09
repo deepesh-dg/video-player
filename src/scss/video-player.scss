@@ -2,6 +2,12 @@
     --deepeshdg-primary: #ff0000;
 }
 
+@mixin responsive() {
+    @media (max-width: "575px") {
+        @content;
+    }
+}
+
 .deepeshdg-video-container {
     position: relative;
     width: 100%;
@@ -44,7 +50,7 @@
         }
 
         .controllers {
-            padding: 16px 16px;
+            padding: 16px 4px 8px;
             position: absolute;
             bottom: 0%;
             left: 0%;
@@ -61,6 +67,10 @@
 
                     > * {
                         margin: 0px 4px;
+
+                        @include responsive() {
+                            margin: 0px 2px;
+                        }
                     }
                 }
 
@@ -75,19 +85,23 @@
 
             .icon-btn {
                 background-color: transparent;
-                margin: 4px 0px;
                 padding: 8px;
                 color: inherit;
-                width: 45px;
-                height: 45px;
+                width: 40px;
+                height: 40px;
                 border-radius: 50%;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                font-size: 1.1rem;
                 border: none;
                 outline: none;
                 transition: 200ms ease-in;
+
+                @include responsive() {
+                    padding: 4px;
+                    width: 30px;
+                    height: 30px;
+                }
 
                 &:hover,
                 &:focus,
@@ -106,10 +120,6 @@
                 border-radius: 8px;
                 cursor: pointer;
                 transition: 300ms all;
-
-                &:hover {
-                    transform: scaleY(2);
-                }
 
                 &::-webkit-slider-runnable-track {
                     background: #ddd;
@@ -146,7 +156,13 @@
             }
 
             .timeline-controller {
-                padding: 0rem 12px;
+                padding: 8px 12px 4px;
+                display: flex;
+                flex-wrap: wrap;
+
+                @include responsive() {
+                    padding: 8px 8px 4px;
+                }
 
                 .timeline-slider {
                     width: 100%;
@@ -173,6 +189,12 @@
                         box-shadow: -5000px 0px 0px 4990px
                             var(--deepeshdg-primary);
                         cursor: pointer;
+                    }
+                }
+
+                &:hover {
+                    .timeline-slider {
+                        transform: scaleY(2);
                     }
                 }
             }
@@ -222,6 +244,10 @@
                 align-items: center;
                 gap: 4px;
                 flex-grow: 1;
+
+                @include responsive() {
+                    font-size: 14px;
+                }
             }
         }
     }
