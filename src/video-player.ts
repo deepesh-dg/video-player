@@ -175,7 +175,11 @@ class VideoPlayer {
             if (this.btn.duration?.totalTime)
                 this.btn.duration.totalTime.textContent = this.getTotalTime();
 
-            if (this.currentTime && this.totalTime && this.btn.timeline) {
+            if (
+                this.currentTime >= 0 &&
+                this.totalTime >= 0 &&
+                this.btn.timeline
+            ) {
                 this.btn.timeline.value = (
                     (this.currentTime / this.totalTime) *
                     100
@@ -654,6 +658,22 @@ class VideoPlayer {
                         break;
                     case "m":
                         if (activeVideoValidate()) this.toggleMute();
+                        break;
+                    case "0":
+                    case "1":
+                    case "2":
+                    case "3":
+                    case "4":
+                    case "5":
+                    case "6":
+                    case "7":
+                    case "8":
+                    case "9":
+                        this.currentTime =
+                            (Number(this.totalTime) *
+                                Number(ev.key.toLowerCase())) /
+                            10;
+                        this.trigger("timeupdate");
                         break;
                     default:
                         break;

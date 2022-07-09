@@ -2,10 +2,12 @@ const express = require("express");
 const app = express();
 const path = require("path");
 const isReachable = require("is-reachable");
+const cors = require("cors");
 
 const host = "127.0.0.1";
 let port = 3000;
 
+app.use(cors());
 app.use(
     "/static/bootstrap",
     express.static(path.join(__dirname, "../node_modules/bootstrap/dist/"))
