@@ -1,6 +1,6 @@
 {
     "name": "@deepeshgupta/video-player",
-    "version": "0.0.22",
+    "version": "0.0.23",
     "description": "a frontend optimized video player",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

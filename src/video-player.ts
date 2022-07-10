@@ -43,10 +43,10 @@ class VideoPlayer {
     /**
      * Frontend Assets
      */
-    private readonly cssUrl =
-        "http://127.0.0.1:3000/static/css/video-player.css";
-    // private cssUrl =
-    //     "https://res.cloudinary.com/deepeshgupta/raw/upload/v1657293020/deepeshgupta/video-player/css/video-player-0.0.22_vfpjzb.css";
+    // private readonly cssUrl =
+    // "http://127.0.0.1:3000/static/css/video-player.css";
+    private cssUrl =
+        "https://res.cloudinary.com/deepeshgupta/raw/upload/v1657472552/deepeshgupta/video-player/css/video-player-0.0.23_vortiu.css";
     private readonly classNames = {
         videoContainer: "deepeshdg-video-container",
         videoControlsContainer: "deepeshdg-video-controls-container",
