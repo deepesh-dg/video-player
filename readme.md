@@ -7,7 +7,7 @@ A frontend web video player.
 CDN JavaScript
 
 ```bash
-https://res.cloudinary.com/deepeshgupta/raw/upload/v1657472610/deepeshgupta/video-player/js/video-player-0.0.23_xll8pb.js
+https://res.cloudinary.com/deepeshgupta/raw/upload/v1657553895/deepeshgupta/video-player/js/video-player-0.0.25_ojlbjk.js
 ```
 
 ## Initialize

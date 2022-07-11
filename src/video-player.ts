@@ -39,18 +39,34 @@ type Events = {
     // pictureInPicture: Event;
 };
 
+interface Document {
+    cancelFullScreen: () => void;
+    webkitExitFullScreen: () => void;
+    webkitCancelFullScreen: () => void;
+    mozCancelFullScreen: () => void;
+    mozFullScreenElement: HTMLElement | null | undefined;
+    webkitFullscreenElement: HTMLElement | null | undefined;
+    webkitIsFullScreen: boolean;
+    mozFullScreen: boolean;
+    msFullscreenElement: HTMLElement | null | undefined;
+}
+
+interface HTMLDivElement {
+    webkitRequestFullScreen: () => void;
+    mozRequestFullScreen: () => void;
+}
+
 class VideoPlayer {
     /**
      * Frontend Assets
      */
     // private readonly cssUrl =
-    // "http://127.0.0.1:3000/static/css/video-player.css";
+    //     "http://127.0.0.1:3000/static/css/video-player.css";
     private cssUrl =
-        "https://res.cloudinary.com/deepeshgupta/raw/upload/v1657472552/deepeshgupta/video-player/css/video-player-0.0.23_vortiu.css";
+        "https://res.cloudinary.com/deepeshgupta/raw/upload/v1657553830/deepeshgupta/video-player/css/video-player-0.0.25_okqxxn.css";
     private readonly classNames = {
         videoContainer: "deepeshdg-video-container",
         videoControlsContainer: "deepeshdg-video-controls-container",
-        focusBtn: "focus-btn",
     };
     private readonly icons = {
         play: `
@@ -60,7 +76,7 @@ class VideoPlayer {
         `,
         pause: `
             <svg class="pause-icon" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
+                <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
             </svg>
         `,
         volume: {
@@ -270,14 +286,35 @@ class VideoPlayer {
 
         this.on("fullscreenin", (e) => {
             const videoContainer = e.target as HTMLDivElement;
-            if (!document.fullscreenElement) videoContainer.requestFullscreen();
+            if (!document.fullscreenElement) {
+                if (videoContainer.requestFullscreen)
+                    videoContainer.requestFullscreen();
+                else if (videoContainer.webkitRequestFullScreen)
+                    videoContainer.webkitRequestFullScreen();
+                else if (videoContainer.mozRequestFullScreen)
+                    videoContainer.mozRequestFullScreen();
+            }
             this.isFullScreen = true;
             videoContainer.classList.add("fullscreen");
         });
 
         this.on("fullscreenout", (e) => {
             const videoContainer = e.target as HTMLDivElement;
-            if (document.fullscreenElement) document.exitFullscreen();
+            if (
+                document.fullscreenElement ||
+                document.webkitIsFullScreen ||
+                document.mozFullScreen ||
+                document.msFullscreenElement
+            ) {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullScreen)
+                    document.webkitExitFullScreen();
+                else if (document.webkitCancelFullScreen)
+                    document.webkitCancelFullScreen();
+                else if (document.mozCancelFullScreen)
+                    document.mozCancelFullScreen();
+                else if (document.cancelFullScreen) document.cancelFullScreen();
+            }
             this.isFullScreen = false;
             videoContainer.classList.remove("fullscreen");
         });
@@ -452,9 +489,7 @@ class VideoPlayer {
                     this.classNames.videoContainer
                 );
 
-            const focusButton = document.createElement("button");
-            focusButton.classList.add(this.classNames.focusBtn);
-            this.videoContainer.appendChild(focusButton);
+            this.videoContainer.setAttribute("tabindex", "0");
 
             this.volumeLevel("high");
         };
@@ -560,14 +595,7 @@ class VideoPlayer {
 
             this.videoControlsContainer
                 ?.querySelector(".mouse-event-zone")
-                ?.addEventListener("click", () => {
-                    this.togglePlay();
-                    this.videoContainer
-                        ?.querySelector<HTMLButtonElement>(
-                            `.${this.classNames.focusBtn}`
-                        )
-                        ?.focus();
-                });
+                ?.addEventListener("click", () => this.togglePlay());
 
             this.videoControlsContainer
                 ?.querySelector(".mouse-event-zone")
@@ -696,10 +724,24 @@ class VideoPlayer {
                 this.unmute();
                 this.setVolume(video.volume);
             });
-            document.addEventListener("fullscreenchange", () => {
-                if (document.fullscreenElement) this.enterFullScreen();
+
+            const fullScreenHandler = () => {
+                if (
+                    document.fullscreenElement ||
+                    document.webkitIsFullScreen ||
+                    document.mozFullScreen ||
+                    document.msFullscreenElement
+                )
+                    this.enterFullScreen();
                 else this.exitFullScreen();
-            });
+            };
+            document.addEventListener(
+                "webkitfullscreenchange",
+                fullScreenHandler
+            );
+            document.addEventListener("mozfullscreenchange", fullScreenHandler);
+            document.addEventListener("fullscreenchange", fullScreenHandler);
+            document.addEventListener("MSFullscreenChange", fullScreenHandler);
         };
 
         await this._init();
