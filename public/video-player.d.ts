@@ -65,6 +65,6 @@ export declare class VideoPlayer {
     toggleFullScreen(): void;
     autoPlay(): void;
     private _init;
-    run(): Promise<this>;
+    run(): this;
 }
 export {};

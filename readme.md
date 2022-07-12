@@ -13,25 +13,19 @@ https://cdn.jsdelivr.net/gh/PrinceDeepu/video-player@0.0.3/public/video-player.b
 ## Initialize
 
 ```bash
-var myVideo;
-(async () => {
-    myVideo = await window.deepeshdg.videoPlayer({
-        video: document.querySelector("video"),
-        loop: true,
-    });
-})();
+const video = window.deepeshdg.videoPlayer({
+    video: document.querySelector("video"),
+    loop: true,
+});
 ```
 
 ### For Multiple
 
 ```bash
-var myVideos;
-(async () => {
-    myVideos = await window.deepeshdg.videoPlayer({
-        videos: document.querySelectorAll("video"),
-        loop: true,
-    });
-})();
+const videos = window.deepeshdg.videoPlayer({
+    videos: document.querySelectorAll("video"),
+    loop: true,
+});
 ```
 
 ## Sample image
