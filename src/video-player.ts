@@ -1,5 +1,22 @@
-type BaseVideoPlayerOptions = {
-    videoContainer?: HTMLDivElement;
+interface IDocument extends Document {
+    cancelFullScreen?: () => void;
+    webkitExitFullScreen?: () => void;
+    webkitCancelFullScreen?: () => void;
+    mozCancelFullScreen?: () => void;
+    mozFullScreenElement?: HTMLElement | null | undefined;
+    webkitFullscreenElement?: HTMLElement | null | undefined;
+    webkitIsFullScreen?: boolean;
+    mozFullScreen?: boolean;
+    msFullscreenElement?: HTMLElement | null | undefined;
+}
+
+interface IHTMLDivElement extends HTMLDivElement {
+    webkitRequestFullScreen?: () => void;
+    mozRequestFullScreen?: () => void;
+}
+
+export type BaseVideoPlayerOptions = {
+    videoContainer?: IHTMLDivElement;
     initialPlay?: boolean;
     initialMuted?: boolean;
     loop?: boolean;
@@ -39,31 +56,7 @@ type Events = {
     // pictureInPicture: Event;
 };
 
-interface Document {
-    cancelFullScreen: () => void;
-    webkitExitFullScreen: () => void;
-    webkitCancelFullScreen: () => void;
-    mozCancelFullScreen: () => void;
-    mozFullScreenElement: HTMLElement | null | undefined;
-    webkitFullscreenElement: HTMLElement | null | undefined;
-    webkitIsFullScreen: boolean;
-    mozFullScreen: boolean;
-    msFullscreenElement: HTMLElement | null | undefined;
-}
-
-interface HTMLDivElement {
-    webkitRequestFullScreen: () => void;
-    mozRequestFullScreen: () => void;
-}
-
-class VideoPlayer {
-    /**
-     * Frontend Assets
-     */
-    // private readonly cssUrl =
-    //     "http://127.0.0.1:3000/static/css/video-player.css";
-    private cssUrl =
-        "https://res.cloudinary.com/deepeshgupta/raw/upload/v1657553830/deepeshgupta/video-player/css/video-player-0.0.25_okqxxn.css";
+export class VideoPlayer {
     private readonly classNames = {
         videoContainer: "deepeshdg-video-container",
         videoControlsContainer: "deepeshdg-video-controls-container",
@@ -114,8 +107,8 @@ class VideoPlayer {
      * Properties of necessary DOM Elements
      */
     private video: HTMLVideoElement;
-    private videoContainer?: HTMLDivElement | null;
-    private videoControlsContainer?: HTMLDivElement | null;
+    private videoContainer?: IHTMLDivElement | null;
+    private videoControlsContainer?: IHTMLDivElement | null;
     private btn: Btn = {};
 
     /**
@@ -139,6 +132,11 @@ class VideoPlayer {
     private initialPlay: boolean;
     private initialMuted: boolean;
     private loop: boolean;
+
+    /**
+     * Extended Document Object
+     */
+    private document = document as IDocument;
 
     constructor(options: VideoPlayerOptions) {
         this.video = options.video;
@@ -204,7 +202,7 @@ class VideoPlayer {
         });
 
         this.on("play", (e) => {
-            const videoContainer = e.target as HTMLDivElement;
+            const videoContainer = e.target as IHTMLDivElement;
             videoContainer.classList.remove("paused");
 
             if (this.currentTime === this.totalTime && this.loop)
@@ -215,7 +213,7 @@ class VideoPlayer {
         });
 
         this.on("pause", (e) => {
-            const videoContainer = e.target as HTMLDivElement;
+            const videoContainer = e.target as IHTMLDivElement;
             videoContainer.classList.add("paused");
 
             if (!this.video.paused) this.video.pause();
@@ -285,8 +283,8 @@ class VideoPlayer {
         });
 
         this.on("fullscreenin", (e) => {
-            const videoContainer = e.target as HTMLDivElement;
-            if (!document.fullscreenElement) {
+            const videoContainer = e.target as IHTMLDivElement;
+            if (!this.document.fullscreenElement) {
                 if (videoContainer.requestFullscreen)
                     videoContainer.requestFullscreen();
                 else if (videoContainer.webkitRequestFullScreen)
@@ -301,19 +299,21 @@ class VideoPlayer {
         this.on("fullscreenout", (e) => {
             const videoContainer = e.target as HTMLDivElement;
             if (
-                document.fullscreenElement ||
-                document.webkitIsFullScreen ||
-                document.mozFullScreen ||
-                document.msFullscreenElement
+                this.document.fullscreenElement ||
+                this.document.webkitIsFullScreen ||
+                this.document.mozFullScreen ||
+                this.document.msFullscreenElement
             ) {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullScreen)
-                    document.webkitExitFullScreen();
-                else if (document.webkitCancelFullScreen)
-                    document.webkitCancelFullScreen();
-                else if (document.mozCancelFullScreen)
-                    document.mozCancelFullScreen();
-                else if (document.cancelFullScreen) document.cancelFullScreen();
+                if (this.document.exitFullscreen)
+                    this.document.exitFullscreen();
+                else if (this.document.webkitExitFullScreen)
+                    this.document.webkitExitFullScreen();
+                else if (this.document.webkitCancelFullScreen)
+                    this.document.webkitCancelFullScreen();
+                else if (this.document.mozCancelFullScreen)
+                    this.document.mozCancelFullScreen();
+                else if (this.document.cancelFullScreen)
+                    this.document.cancelFullScreen();
             }
             this.isFullScreen = false;
             videoContainer.classList.remove("fullscreen");
@@ -462,22 +462,15 @@ class VideoPlayer {
         else this.pause();
     }
 
-    private async _init() {
-        const appendCSS = async () => {
-            const styleElement = document.createElement("style");
-
-            const styles = await fetch(this.cssUrl);
-            styleElement.innerHTML = await styles.text();
-
-            document.head.appendChild(styleElement);
-
+    private _init() {
+        const appendCSS = () => {
             this.video.style.width = "100%";
             this.video.style.height = "100%";
         };
 
         const initVideoContainer = () => {
             if (!this.videoContainer) {
-                this.videoContainer = document.createElement("div");
+                this.videoContainer = this.document.createElement("div");
                 this.videoContainer.classList.add(
                     this.classNames.videoContainer
                 );
@@ -495,7 +488,7 @@ class VideoPlayer {
         };
 
         const initVideoControllers = () => {
-            this.videoControlsContainer = document.createElement("div");
+            this.videoControlsContainer = this.document.createElement("div");
             this.videoControlsContainer.classList.add(
                 this.classNames.videoControlsContainer
             );
@@ -575,7 +568,7 @@ class VideoPlayer {
             this.videoContainer?.appendChild(this.videoControlsContainer);
         };
 
-        await appendCSS();
+        appendCSS();
         initVideoContainer();
         initVideoControllers();
     }
@@ -631,13 +624,13 @@ class VideoPlayer {
         };
 
         const keyboardEvents = () => {
-            document.body.addEventListener("keydown", (ev) => {
+            this.document.body.addEventListener("keydown", (ev) => {
                 const noEventTags = ["input", "textarea", "select"];
                 const noEventClass = [""];
                 const activeTag =
-                    document.activeElement?.tagName.toLowerCase() ?? "";
+                    this.document.activeElement?.tagName.toLowerCase() ?? "";
                 const activeClass =
-                    document.activeElement?.className.split(" ") ?? [];
+                    this.document.activeElement?.className.split(" ") ?? [];
                 if (noEventTags.indexOf(activeTag) > -1) return;
                 for (let i = 0; i < activeClass.length; i++) {
                     const className = activeClass[i];
@@ -645,7 +638,11 @@ class VideoPlayer {
                 }
 
                 const activeVideoValidate = (): boolean => {
-                    if (this.videoContainer?.contains(document.activeElement)) {
+                    if (
+                        this.videoContainer?.contains(
+                            this.document.activeElement
+                        )
+                    ) {
                         ev.preventDefault();
                         return true;
                     }
@@ -727,24 +724,33 @@ class VideoPlayer {
 
             const fullScreenHandler = () => {
                 if (
-                    document.fullscreenElement ||
-                    document.webkitIsFullScreen ||
-                    document.mozFullScreen ||
-                    document.msFullscreenElement
+                    this.document.fullscreenElement ||
+                    this.document.webkitIsFullScreen ||
+                    this.document.mozFullScreen ||
+                    this.document.msFullscreenElement
                 )
                     this.enterFullScreen();
                 else this.exitFullScreen();
             };
-            document.addEventListener(
+            this.document.addEventListener(
                 "webkitfullscreenchange",
                 fullScreenHandler
             );
-            document.addEventListener("mozfullscreenchange", fullScreenHandler);
-            document.addEventListener("fullscreenchange", fullScreenHandler);
-            document.addEventListener("MSFullscreenChange", fullScreenHandler);
+            this.document.addEventListener(
+                "mozfullscreenchange",
+                fullScreenHandler
+            );
+            this.document.addEventListener(
+                "fullscreenchange",
+                fullScreenHandler
+            );
+            this.document.addEventListener(
+                "MSFullscreenChange",
+                fullScreenHandler
+            );
         };
 
-        await this._init();
+        this._init();
         this.registerCustomEvents();
 
         mouseEvents();
@@ -762,27 +768,3 @@ type VideoPlayerConfigs = BaseVideoPlayerOptions & {
     video: HTMLVideoElement;
     videos?: HTMLVideoElement[];
 };
-
-Object.defineProperty(window, "deepeshdg", {
-    value: {
-        videoPlayer: async (options: VideoPlayerConfigs) => {
-            if (options.video) {
-                const videoPlayer = new VideoPlayer(options);
-                return await videoPlayer.run();
-            } else if (options.videos) {
-                const response: any[] = [];
-
-                for (let index = 0; index < options.videos.length; index++) {
-                    options.video = options.videos[index];
-                    const videoPlayer = new VideoPlayer(options);
-                    response[index] = await videoPlayer.run();
-                }
-
-                return response;
-            }
-
-            return false;
-        },
-    },
-    writable: false,
-});
