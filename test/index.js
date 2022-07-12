@@ -12,7 +12,7 @@ app.use(
     "/static/bootstrap",
     express.static(path.join(__dirname, "../node_modules/bootstrap/dist/"))
 );
-app.use("/static", express.static(path.join(__dirname, "../dist")));
+app.use("/static", express.static(path.join(__dirname, "../public")));
 app.use("/assets", express.static(path.join(__dirname, "./assets")));
 
 app.get("/", (req, res) => {

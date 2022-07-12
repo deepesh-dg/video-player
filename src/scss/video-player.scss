@@ -1,3 +1,5 @@
+$primary: #ff0000;
+
 :root {
     --deepeshdg-primary: #ff0000;
 }
@@ -248,8 +250,16 @@
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                gap: 4px;
                 flex-grow: 1;
+
+                .current-time {
+                    margin-right: 4px;
+                }
+
+                .total-time,
+                .remaining-time {
+                    margin-left: 4px;
+                }
 
                 @include responsive() {
                     font-size: 14px;
