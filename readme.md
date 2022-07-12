@@ -7,7 +7,7 @@ A frontend web video player.
 CDN JavaScript
 
 ```bash
-https://res.cloudinary.com/deepeshgupta/raw/upload/v1657553895/deepeshgupta/video-player/js/video-player-0.0.25_ojlbjk.js
+https://cdn.jsdelivr.net/gh/PrinceDeepu/video-player@0.0.3/public/video-player.bundle.js
 ```
 
 ## Initialize
@@ -51,6 +51,8 @@ var myVideos;
 -   Press `m` for toggle `Mute`.
 
 -   Press `f` or `double click` Mouse on Screen for toggle `Full Screen`.
+
+-   Press `0 - 9` to skip Video Duration Accordingly.
 
 -   `click` Mouse on anywhere on Video above controllers for `Play / Pause`.
 
