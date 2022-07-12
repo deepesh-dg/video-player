@@ -8,17 +8,17 @@ type VideoPlayerConfigs = BaseVideoPlayerOptions & {
 
 Object.defineProperty(window, "deepeshdg", {
     value: {
-        videoPlayer: async (options: VideoPlayerConfigs) => {
+        videoPlayer: (options: VideoPlayerConfigs) => {
             if (options.video) {
                 const videoPlayer = new VideoPlayer(options);
-                return await videoPlayer.run();
+                return videoPlayer.run();
             } else if (options.videos) {
                 const response: any[] = [];
 
                 for (let index = 0; index < options.videos.length; index++) {
                     options.video = options.videos[index];
                     const videoPlayer = new VideoPlayer(options);
-                    response[index] = await videoPlayer.run();
+                    response[index] = videoPlayer.run();
                 }
 
                 return response;

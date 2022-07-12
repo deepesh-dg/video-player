@@ -573,7 +573,7 @@ export class VideoPlayer {
         initVideoControllers();
     }
 
-    public async run() {
+    public run() {
         const mouseEvents = () => {
             this.videoControlsContainer
                 ?.querySelector(`.controllers`)
@@ -763,8 +763,3 @@ export class VideoPlayer {
         return this;
     }
 }
-
-type VideoPlayerConfigs = BaseVideoPlayerOptions & {
-    video: HTMLVideoElement;
-    videos?: HTMLVideoElement[];
-};
