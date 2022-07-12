@@ -38,7 +38,19 @@ type Btn = {
         currentTime: HTMLElement | null;
         totalTime: HTMLElement | null;
     };
-    timeline?: HTMLInputElement | null;
+    timeline?: {
+        timeline?: HTMLInputElement | null;
+        jumpto?: HTMLDivElement | null;
+    };
+    notification?: {
+        container?: HTMLDivElement | null;
+        top?: HTMLDivElement | null;
+        center?: HTMLDivElement | null;
+        centerLeft?: HTMLDivElement | null;
+        centerRight?: HTMLDivElement | null;
+        bottom?: HTMLDivElement | null;
+        on?: NodeJS.Timeout | null;
+    };
 };
 
 type Events = {
@@ -55,6 +67,16 @@ type Events = {
     // caption: Event;
     // pictureInPicture: Event;
 };
+
+function calcSliderPos(e: MouseEvent) {
+    const el = e.target as HTMLInputElement;
+    return {
+        mouseLocation: e.offsetX,
+        value:
+            (e.offsetX / el.clientWidth) *
+            parseInt(el.getAttribute("max") ?? "0", 10),
+    };
+}
 
 export class VideoPlayer {
     private readonly classNames = {
@@ -101,6 +123,16 @@ export class VideoPlayer {
                 </svg>
             `,
         },
+        forward: `
+            <svg viewBox="0 0 512 512">
+                <path fill="currentColor" d="M500.5 231.4l-192-160C287.9 54.3 256 68.6 256 96v320c0 27.4 31.9 41.8 52.5 24.6l192-160c15.3-12.8 15.3-36.4 0-49.2zm-256 0l-192-160C31.9 54.3 0 68.6 0 96v320c0 27.4 31.9 41.8 52.5 24.6l192-160c15.3-12.8 15.3-36.4 0-49.2z"/>
+            </svg>
+        `,
+        backward: `
+            <svg viewBox="0 0 512 512">
+                <path fill="currentColor" d="M11.5 280.6l192 160c20.6 17.2 52.5 2.8 52.5-24.6V96c0-27.4-31.9-41.8-52.5-24.6l-192 160c-15.3 12.8-15.3 36.4 0 49.2zm256 0l192 160c20.6 17.2 52.5 2.8 52.5-24.6V96c0-27.4-31.9-41.8-52.5-24.6l-192 160c-15.3 12.8-15.3 36.4 0 49.2z"/>
+            </svg>
+        `,
     };
 
     /**
@@ -194,10 +226,11 @@ export class VideoPlayer {
                 this.totalTime >= 0 &&
                 this.btn.timeline
             ) {
-                this.btn.timeline.value = (
-                    (this.currentTime / this.totalTime) *
-                    100
-                ).toString();
+                if (this.btn.timeline.timeline)
+                    this.btn.timeline.timeline.value = (
+                        (this.currentTime / this.totalTime) *
+                        100
+                    ).toString();
             }
         });
 
@@ -210,6 +243,8 @@ export class VideoPlayer {
 
             if (this.video.paused) this.video.play();
             this.isPaused = this.video.paused;
+
+            this.sendNotification("center", "playpause");
         });
 
         this.on("pause", (e) => {
@@ -218,12 +253,16 @@ export class VideoPlayer {
 
             if (!this.video.paused) this.video.pause();
             this.isPaused = this.video.paused;
+
+            this.sendNotification("center", "playpause");
         });
 
         this.on("mute", () => {
             this.volumeLevel("muted");
             if (!this.video.muted) this.video.muted = true;
             this.isMuted = this.video.muted;
+
+            this.sendNotification("center", "mute");
         });
 
         this.on("unmute", () => {
@@ -235,6 +274,8 @@ export class VideoPlayer {
 
             if (this.video.muted) this.video.muted = false;
             this.isMuted = this.video.muted;
+
+            this.sendNotification("center", "volumechange");
         });
 
         this.on("volume", () => {
@@ -266,6 +307,8 @@ export class VideoPlayer {
              */
             if (this.btn.volume?.slider)
                 this.btn.volume.slider.value = this.volume.toString();
+
+            this.sendNotification("center", "volumechange");
         });
 
         this.on("timeupdate", () => {
@@ -462,6 +505,59 @@ export class VideoPlayer {
         else this.pause();
     }
 
+    public sendNotification(
+        where: "top" | "center" | "centerLeft" | "centerRight" | "bottom",
+        type: "playpause" | "volumechange" | "mute" | "forward" | "backward",
+        timeout = 600
+    ) {
+        if (!this.btn.notification) return;
+        const el = this.btn.notification[where];
+        if (!el) return;
+
+        const hide = () => {
+            el.classList.remove("show");
+        };
+
+        const show = () => {
+            el.classList.add("show");
+        };
+
+        if (this.btn.notification.on) {
+            clearTimeout(this.btn.notification.on);
+            hide();
+        }
+
+        switch (type) {
+            case "playpause":
+                if (this.isPaused)
+                    el.innerHTML = `<span>${this.icons.pause}</span>`;
+                else el.innerHTML = `<span>${this.icons.play}</span>`;
+                show();
+                break;
+            case "volumechange":
+                el.innerHTML = `<span class="text">${Math.floor(
+                    this.volume * 100
+                )}%</span>`;
+                show();
+                break;
+            case "mute":
+                if (this.isMuted)
+                    el.innerHTML = `<span>${this.icons.volume.muted}</span>`;
+                show();
+                break;
+            case "forward":
+                el.innerHTML = `<span>${this.icons.forward}</span>`;
+                break;
+            case "backward":
+                el.innerHTML = `<span>${this.icons.backward}</span>`;
+                break;
+            default:
+                break;
+        }
+
+        this.btn.notification.on = setTimeout(hide, timeout);
+    }
+
     private _init() {
         const appendCSS = () => {
             this.video.style.width = "100%";
@@ -494,10 +590,32 @@ export class VideoPlayer {
             );
 
             this.videoControlsContainer.innerHTML = `
+                <div class="notifications">
+                    <div class="notification-container">
+                        <div class="top">
+                            <div class="notification"></div>
+                        </div>
+                        <div class="center">
+                            <div class="notification"></div>
+                        </div>
+                        <div class="centerLeft">
+                            <div class="notification"></div>
+                        </div>
+                        <div class="centerRight">
+                            <div class="notification"></div>
+                        </div>
+                        <div class="bottom">
+                            <div class="notification"></div>
+                        </div>
+                    </div>
+                </div>
                 <div class="mouse-event-zone"></div>
                 <div class="controllers">
                     <div class="timeline-controller">
-                        <input class="timeline-slider" type="range" min="0" max="100" step="any" value="0"/>
+                        <div class="timeline-slider-container">
+                            <input class="timeline-slider" type="range" min="0" max="100" step="any" value="0"/>
+                            <div class="jump-duration">0:00</div>
+                        </div>
                     </div>
                     <div class="controls">
                         <div class="left">
@@ -532,6 +650,9 @@ export class VideoPlayer {
                 </div>
             `;
 
+            /**
+             * Assigning Controllers
+             */
             this.btn.playPause = this.videoControlsContainer.querySelector(
                 ".icon-btn.play-pause-btn"
             );
@@ -543,7 +664,6 @@ export class VideoPlayer {
                     `input.volume-slider[type="range"]`
                 ),
             };
-
             this.btn.duration = {
                 currentTime:
                     this.videoControlsContainer.querySelector<HTMLElement>(
@@ -554,16 +674,42 @@ export class VideoPlayer {
                         ".total-time"
                     ),
             };
-
             this.btn.fullScreen =
                 this.videoControlsContainer.querySelector<HTMLElement>(
                     `.icon-btn.fullscreen-btn`
                 );
-
-            this.btn.timeline =
-                this.videoControlsContainer.querySelector<HTMLInputElement>(
-                    ".timeline-slider"
-                );
+            this.btn.timeline = {
+                timeline:
+                    this.videoControlsContainer.querySelector<HTMLInputElement>(
+                        ".timeline-slider"
+                    ),
+                jumpto: this.videoControlsContainer.querySelector<HTMLDivElement>(
+                    ".jump-duration"
+                ),
+            };
+            this.btn.notification = {
+                container:
+                    this.videoControlsContainer.querySelector<HTMLDivElement>(
+                        ".notifications"
+                    ),
+                top: this.videoControlsContainer.querySelector<HTMLDivElement>(
+                    ".notifications .top .notification"
+                ),
+                center: this.videoControlsContainer.querySelector<HTMLDivElement>(
+                    ".notifications .center .notification"
+                ),
+                centerLeft:
+                    this.videoControlsContainer.querySelector<HTMLDivElement>(
+                        ".notifications .centerLeft .notification"
+                    ),
+                centerRight:
+                    this.videoControlsContainer.querySelector<HTMLDivElement>(
+                        ".notifications .centerRight .notification"
+                    ),
+                bottom: this.videoControlsContainer.querySelector<HTMLDivElement>(
+                    ".notifications .bottom .notification"
+                ),
+            };
 
             this.videoContainer?.appendChild(this.videoControlsContainer);
         };
@@ -611,11 +757,35 @@ export class VideoPlayer {
                 this.setVolume(Number(target.value));
             });
 
-            this.btn.timeline?.addEventListener("input", (e) => {
+            this.btn.timeline?.timeline?.addEventListener("input", (e) => {
                 const target = e.target as HTMLInputElement;
                 this.currentTime =
                     (Number(this.totalTime) * Number(target.value)) / 100;
                 this.trigger("timeupdate");
+            });
+
+            // this.btn.timeline?.timeline?.addEventListener("mouseover", (e) => {
+            //     if (this.btn.timeline?.jumpto) {
+            //         this.btn.timeline.jumpto.classList.add("visible");
+            //     }
+            // });
+
+            // this.btn.timeline?.timeline?.addEventListener("mouseleave", (e) => {
+            //     if (this.btn.timeline?.jumpto) {
+            //         this.btn.timeline.jumpto.classList.remove("visible");
+            //     }
+            // });
+
+            this.btn.timeline?.timeline?.addEventListener("mousemove", (e) => {
+                const { mouseLocation, value } = calcSliderPos(e);
+                const duration: number = this.totalTime
+                    ? (this.totalTime * Number(value.toFixed(2))) / 100
+                    : 0;
+                if (this.btn.timeline?.jumpto) {
+                    this.btn.timeline.jumpto.textContent =
+                        this.formatDuration(duration);
+                    this.btn.timeline.jumpto.style.left = `${mouseLocation.toString()}px`;
+                }
             });
 
             this.btn.fullScreen?.addEventListener("click", () =>
