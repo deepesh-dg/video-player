@@ -44,12 +44,26 @@ type Btn = {
     };
     notification?: {
         container?: HTMLDivElement | null;
-        top?: HTMLDivElement | null;
-        center?: HTMLDivElement | null;
-        centerLeft?: HTMLDivElement | null;
-        centerRight?: HTMLDivElement | null;
-        bottom?: HTMLDivElement | null;
-        on?: NodeJS.Timeout | null;
+        top?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+        center?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+        centerLeft?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+        centerRight?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+        bottom?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
     };
 };
 
@@ -244,7 +258,8 @@ export class VideoPlayer {
             if (this.video.paused) this.video.play();
             this.isPaused = this.video.paused;
 
-            this.sendNotification("center", "playpause");
+            if (!this.isPaused)
+                this.sendNotification("center", this.icons.play);
         });
 
         this.on("pause", (e) => {
@@ -254,7 +269,8 @@ export class VideoPlayer {
             if (!this.video.paused) this.video.pause();
             this.isPaused = this.video.paused;
 
-            this.sendNotification("center", "playpause");
+            if (this.isPaused)
+                this.sendNotification("center", this.icons.pause);
         });
 
         this.on("mute", () => {
@@ -262,7 +278,7 @@ export class VideoPlayer {
             if (!this.video.muted) this.video.muted = true;
             this.isMuted = this.video.muted;
 
-            this.sendNotification("center", "mute");
+            this.sendNotification("center", this.icons.volume.muted);
         });
 
         this.on("unmute", () => {
@@ -275,7 +291,7 @@ export class VideoPlayer {
             if (this.video.muted) this.video.muted = false;
             this.isMuted = this.video.muted;
 
-            this.sendNotification("center", "volumechange");
+            this.sendNotification("top", `${Math.floor(this.volume * 100)}%`);
         });
 
         this.on("volume", () => {
@@ -308,7 +324,7 @@ export class VideoPlayer {
             if (this.btn.volume?.slider)
                 this.btn.volume.slider.value = this.volume.toString();
 
-            this.sendNotification("center", "volumechange");
+            this.sendNotification("top", `${Math.floor(this.volume * 100)}%`);
         });
 
         this.on("timeupdate", () => {
@@ -507,11 +523,12 @@ export class VideoPlayer {
 
     public sendNotification(
         where: "top" | "center" | "centerLeft" | "centerRight" | "bottom",
-        type: "playpause" | "volumechange" | "mute" | "forward" | "backward",
+        msg: string,
         timeout = 600
     ) {
         if (!this.btn.notification) return;
-        const el = this.btn.notification[where];
+        const el = this.btn.notification[where]?.el;
+        var on = this.btn.notification[where]?.on;
         if (!el) return;
 
         const hide = () => {
@@ -522,40 +539,15 @@ export class VideoPlayer {
             el.classList.add("show");
         };
 
-        if (this.btn.notification.on) {
-            clearTimeout(this.btn.notification.on);
-            hide();
-        }
+        if (on) clearTimeout(on);
 
-        switch (type) {
-            case "playpause":
-                if (this.isPaused)
-                    el.innerHTML = `<span>${this.icons.pause}</span>`;
-                else el.innerHTML = `<span>${this.icons.play}</span>`;
-                show();
-                break;
-            case "volumechange":
-                el.innerHTML = `<span class="text">${Math.floor(
-                    this.volume * 100
-                )}%</span>`;
-                show();
-                break;
-            case "mute":
-                if (this.isMuted)
-                    el.innerHTML = `<span>${this.icons.volume.muted}</span>`;
-                show();
-                break;
-            case "forward":
-                el.innerHTML = `<span>${this.icons.forward}</span>`;
-                break;
-            case "backward":
-                el.innerHTML = `<span>${this.icons.backward}</span>`;
-                break;
-            default:
-                break;
-        }
+        el.innerHTML = `<span>${msg}</span>`;
+        show();
 
-        this.btn.notification.on = setTimeout(hide, timeout);
+        this.btn.notification[where] = {
+            el: el,
+            on: setTimeout(hide, timeout),
+        };
     }
 
     private _init() {
@@ -580,6 +572,61 @@ export class VideoPlayer {
 
             this.videoContainer.setAttribute("tabindex", "0");
 
+            /**
+             * Setting Up Notification
+             */
+            const notifications = this.document.createElement("div");
+            notifications.classList.add("notifications");
+            notifications.innerHTML = `
+                <div class="notification-container">
+                    <div class="top">
+                        <div class="notification"></div>
+                    </div>
+                    <div class="center">
+                        <div class="notification"></div>
+                    </div>
+                    <div class="centerLeft">
+                        <div class="notification"></div>
+                    </div>
+                    <div class="centerRight">
+                        <div class="notification"></div>
+                    </div>
+                    <div class="bottom">
+                        <div class="notification"></div>
+                    </div>
+                </div>
+            `;
+            this.videoContainer.appendChild(notifications);
+
+            this.btn.notification = {
+                container: notifications,
+                top: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".top .notification"
+                    ),
+                },
+                center: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".center .notification"
+                    ),
+                },
+                centerLeft: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".centerLeft .notification"
+                    ),
+                },
+                centerRight: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".centerRight .notification"
+                    ),
+                },
+                bottom: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".bottom .notification"
+                    ),
+                },
+            };
+
             this.volumeLevel("high");
         };
 
@@ -590,25 +637,6 @@ export class VideoPlayer {
             );
 
             this.videoControlsContainer.innerHTML = `
-                <div class="notifications">
-                    <div class="notification-container">
-                        <div class="top">
-                            <div class="notification"></div>
-                        </div>
-                        <div class="center">
-                            <div class="notification"></div>
-                        </div>
-                        <div class="centerLeft">
-                            <div class="notification"></div>
-                        </div>
-                        <div class="centerRight">
-                            <div class="notification"></div>
-                        </div>
-                        <div class="bottom">
-                            <div class="notification"></div>
-                        </div>
-                    </div>
-                </div>
                 <div class="mouse-event-zone"></div>
                 <div class="controllers">
                     <div class="timeline-controller">
@@ -685,29 +713,6 @@ export class VideoPlayer {
                     ),
                 jumpto: this.videoControlsContainer.querySelector<HTMLDivElement>(
                     ".jump-duration"
-                ),
-            };
-            this.btn.notification = {
-                container:
-                    this.videoControlsContainer.querySelector<HTMLDivElement>(
-                        ".notifications"
-                    ),
-                top: this.videoControlsContainer.querySelector<HTMLDivElement>(
-                    ".notifications .top .notification"
-                ),
-                center: this.videoControlsContainer.querySelector<HTMLDivElement>(
-                    ".notifications .center .notification"
-                ),
-                centerLeft:
-                    this.videoControlsContainer.querySelector<HTMLDivElement>(
-                        ".notifications .centerLeft .notification"
-                    ),
-                centerRight:
-                    this.videoControlsContainer.querySelector<HTMLDivElement>(
-                        ".notifications .centerRight .notification"
-                    ),
-                bottom: this.videoControlsContainer.querySelector<HTMLDivElement>(
-                    ".notifications .bottom .notification"
                 ),
             };
 
@@ -831,16 +836,40 @@ export class VideoPlayer {
                         if (activeVideoValidate()) this.togglePlay();
                         break;
                     case "j":
-                        if (activeVideoValidate()) this.skip(-10);
+                        if (activeVideoValidate()) {
+                            this.skip(-10);
+                            this.sendNotification(
+                                "centerLeft",
+                                `10s${this.icons.backward}`
+                            );
+                        }
                         break;
                     case "l":
-                        if (activeVideoValidate()) this.skip(10);
+                        if (activeVideoValidate()) {
+                            this.skip(10);
+                            this.sendNotification(
+                                "centerRight",
+                                `${this.icons.forward}10s`
+                            );
+                        }
                         break;
                     case "arrowleft":
-                        if (activeVideoValidate()) this.skip(-5);
+                        if (activeVideoValidate()) {
+                            this.skip(-5);
+                            this.sendNotification(
+                                "centerLeft",
+                                `5s${this.icons.backward}`
+                            );
+                        }
                         break;
                     case "arrowright":
-                        if (activeVideoValidate()) this.skip(5);
+                        if (activeVideoValidate()) {
+                            this.skip(5);
+                            this.sendNotification(
+                                "centerRight",
+                                `${this.icons.forward}5s`
+                            );
+                        }
                         break;
                     case "arrowup":
                         if (activeVideoValidate()) this.setVolume(5, true);
