@@ -1,8 +1,28 @@
 $primary: #ff0000;
 $secondary: rgba(lighten($primary, 12), 0.8);
+$yiq-text-dark: #0a0a0a;
+$yiq-text-light: #f0f0f0;
+$yiq-contrasted-threshold: 150 !default;
+
+@function color-yiq($color, $dark: $yiq-text-dark, $light: $yiq-text-light) {
+    $r: red($color);
+    $g: green($color);
+    $b: blue($color);
+
+    $yiq: (($r * 299) + ($g * 587) + ($b * 114)) * 0.001;
+
+    @if ($yiq >= $yiq-contrasted-threshold) {
+        @return $dark;
+    } @else {
+        @return $light;
+    }
+}
 
 :root {
-    --deepeshdg-primary: #ff0000;
+    --deepeshdg-primary: #{$primary};
+    --deepeshdg-secondary: #{$secondary};
+    --deepeshdg-primary-text: #{color-yiq($primary)};
+    --deepeshdg-secondary-text: #{color-yiq($secondary)};
 }
 
 @mixin responsive() {
@@ -58,7 +78,7 @@ $secondary: rgba(lighten($primary, 12), 0.8);
 
                 .notification {
                     background-color: $secondary;
-                    color: #ffffff;
+                    color: var(--deepeshdg-secondary-text);
                     border-radius: 6px;
                     padding: 6px 12px;
                     opacity: 0;
@@ -126,7 +146,7 @@ $secondary: rgba(lighten($primary, 12), 0.8);
         right: 0%;
         top: 0%;
         bottom: 0%;
-        color: white;
+        color: #ffffff;
         opacity: 0;
         transition: 150ms all;
         transition-delay: 1.3s;
@@ -280,7 +300,7 @@ $secondary: rgba(lighten($primary, 12), 0.8);
                     border-radius: 4px;
                     font-size: 80%;
                     background-color: $secondary;
-                    color: #ffffff;
+                    color: var(--deepeshdg-secondary-text);
                     opacity: 0;
                     visibility: visible;
                     transform: translate(-50%, 6px);
