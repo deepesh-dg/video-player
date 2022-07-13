@@ -82,14 +82,40 @@ type Events = {
     // pictureInPicture: Event;
 };
 
-function calcSliderPos(e: MouseEvent) {
+function calcSliderPos(e: MouseEvent | TouchEvent | any) {
     const el = e.target as HTMLInputElement;
-    return {
-        mouseLocation: e.offsetX,
-        value:
-            (e.offsetX / el.clientWidth) *
-            parseInt(el.getAttribute("max") ?? "0", 10),
-    };
+    if (
+        e.type == "touchstart" ||
+        e.type == "touchmove" ||
+        e.type == "touchend" ||
+        e.type == "touchcancel"
+    ) {
+        var touch =
+            e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
+        return {
+            mouseLocation: touch.pageX,
+            value:
+                (touch.pageX / el.clientWidth) *
+                parseInt(el.getAttribute("max") ?? "0", 10),
+        };
+    } else if (
+        e.type == "mousedown" ||
+        e.type == "mouseup" ||
+        e.type == "mousemove" ||
+        e.type == "mouseover" ||
+        e.type == "mouseout" ||
+        e.type == "mouseenter" ||
+        e.type == "mouseleave"
+    ) {
+        return {
+            mouseLocation: e.offsetX,
+            value:
+                (e.offsetX / el.clientWidth) *
+                parseInt(el.getAttribute("max") ?? "0", 10),
+        };
+    }
+
+    return { mouseLocation: 0, value: 0 };
 }
 
 export class VideoPlayer {
@@ -246,6 +272,11 @@ export class VideoPlayer {
                         100
                     ).toString();
             }
+
+            // if (this.btn.timeline?.timeline)
+            //     this.btn.timeline.timeline.step = Number(
+            //         100 / this.totalTime
+            //     ).toString();
         });
 
         this.on("play", (e) => {
@@ -641,7 +672,7 @@ export class VideoPlayer {
                 <div class="controllers">
                     <div class="timeline-controller">
                         <div class="timeline-slider-container">
-                            <input class="timeline-slider" type="range" min="0" max="100" step="any" value="0"/>
+                            <input class="timeline-slider" type="range" min="0" max="100" step="1" value="0"/>
                             <div class="jump-duration">0:00</div>
                         </div>
                     </div>
@@ -749,6 +780,20 @@ export class VideoPlayer {
         };
 
         const controllersEvents = () => {
+            const jumptoHandler = (e: Event, getValue = false) => {
+                const { mouseLocation, value } = calcSliderPos(e);
+                const duration: number = this.totalTime
+                    ? (this.totalTime * Number(value.toFixed(2))) / 100
+                    : 0;
+                if (this.btn.timeline?.jumpto) {
+                    this.btn.timeline.jumpto.textContent =
+                        this.formatDuration(duration);
+                    this.btn.timeline.jumpto.style.left = `${mouseLocation.toString()}px`;
+                }
+
+                if (getValue) return { mouseLocation, value };
+            };
+
             this.btn.playPause?.addEventListener("click", () =>
                 this.togglePlay()
             );
@@ -767,31 +812,22 @@ export class VideoPlayer {
                 this.currentTime =
                     (Number(this.totalTime) * Number(target.value)) / 100;
                 this.trigger("timeupdate");
-            });
-
-            // this.btn.timeline?.timeline?.addEventListener("mouseover", (e) => {
-            //     if (this.btn.timeline?.jumpto) {
-            //         this.btn.timeline.jumpto.classList.add("visible");
-            //     }
-            // });
-
-            // this.btn.timeline?.timeline?.addEventListener("mouseleave", (e) => {
-            //     if (this.btn.timeline?.jumpto) {
-            //         this.btn.timeline.jumpto.classList.remove("visible");
-            //     }
-            // });
-
-            this.btn.timeline?.timeline?.addEventListener("mousemove", (e) => {
-                const { mouseLocation, value } = calcSliderPos(e);
-                const duration: number = this.totalTime
-                    ? (this.totalTime * Number(value.toFixed(2))) / 100
-                    : 0;
                 if (this.btn.timeline?.jumpto) {
-                    this.btn.timeline.jumpto.textContent =
-                        this.formatDuration(duration);
-                    this.btn.timeline.jumpto.style.left = `${mouseLocation.toString()}px`;
+                    this.btn.timeline.jumpto.textContent = this.formatDuration(
+                        this.currentTime
+                    );
                 }
             });
+
+            this.btn.timeline?.timeline?.addEventListener(
+                "touchmove",
+                jumptoHandler
+            );
+
+            this.btn.timeline?.timeline?.addEventListener(
+                "mousemove",
+                jumptoHandler
+            );
 
             this.btn.fullScreen?.addEventListener("click", () =>
                 this.toggleFullScreen()
