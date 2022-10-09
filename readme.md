@@ -52,12 +52,4 @@ const videos = window.deepeshdg.videoPlayer({
 
 ### Boom, You are good to go...
 
-## ![Deepesh Gupta](https://res.cloudinary.com/deepeshgupta/image/upload/v1657209567/deepeshgupta/facebook_cover_tsvhy3.png)
-
-Developed By - _Deepesh Gupta_
-
----
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
+Developed By - [_Deepesh Gupta_](https://deepeshdg.com/)
