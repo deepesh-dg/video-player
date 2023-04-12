@@ -7,7 +7,7 @@ A frontend web video player.
 CDN JavaScript
 
 ```bash
-https://cdn.jsdelivr.net/gh/PrinceDeepu/video-player@0.0.3/public/video-player.bundle.js
+https://cdn.jsdelivr.net/gh/deepesh-dg/video-player/public/video-player.bundle.js
 ```
 
 ## Initialize
