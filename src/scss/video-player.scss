@@ -1,7 +1,28 @@
 $primary: #ff0000;
+$secondary: rgba(lighten($primary, 12), 0.8);
+$yiq-text-dark: #0a0a0a;
+$yiq-text-light: #f0f0f0;
+$yiq-contrasted-threshold: 150 !default;
+
+@function color-yiq($color, $dark: $yiq-text-dark, $light: $yiq-text-light) {
+    $r: red($color);
+    $g: green($color);
+    $b: blue($color);
+
+    $yiq: (($r * 299) + ($g * 587) + ($b * 114)) * 0.001;
+
+    @if ($yiq >= $yiq-contrasted-threshold) {
+        @return $dark;
+    } @else {
+        @return $light;
+    }
+}
 
 :root {
-    --deepeshdg-primary: #ff0000;
+    --deepeshdg-primary: #{$primary};
+    --deepeshdg-secondary: #{$secondary};
+    --deepeshdg-primary-text: #{color-yiq($primary)};
+    --deepeshdg-secondary-text: #{color-yiq($secondary)};
 }
 
 @mixin responsive() {
@@ -18,13 +39,119 @@ $primary: #ff0000;
     background-color: #ffffff;
     outline: none;
 
+    @keyframes video-notification {
+        0% {
+            opacity: 0;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1.5);
+        }
+    }
+
+    svg {
+        width: 25px;
+        height: 25px;
+    }
+
+    .notifications {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        .notification-container {
+            position: relative;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+
+            > * {
+                position: absolute;
+                left: 50%;
+
+                .notification {
+                    background-color: var(--deepeshdg-secondary);
+                    color: var(--deepeshdg-secondary-text);
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: scale(0.6);
+                    transition: 200ms all ease;
+
+                    span {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        font-size: 90%;
+                        gap: 4px;
+                        font-weight: 500;
+                    }
+
+                    &.show {
+                        opacity: 1;
+                        visibility: visible;
+                        transform: scale(1);
+                    }
+                }
+            }
+
+            .top {
+                top: 5%;
+                transform: translateX(-50%);
+            }
+
+            .center {
+                top: 50%;
+                transform: translate(-50%, -50%);
+
+                .notification {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 16px;
+                    border-radius: 50%;
+
+                    @include responsive() {
+                        padding: 12px;
+                    }
+                }
+            }
+
+            .centerLeft {
+                top: 50%;
+                left: 15%;
+                transform: translate(-50%, -50%);
+            }
+
+            .centerRight {
+                top: 50%;
+                left: unset;
+                right: 15%;
+                transform: translate(50%, -50%);
+            }
+
+            .bottom {
+                bottom: calc(5% + 55px);
+                transform: translateX(-50%);
+            }
+        }
+    }
+
     .deepeshdg-video-controls-container {
         position: absolute;
         left: 0%;
         right: 0%;
         top: 0%;
         bottom: 0%;
-        color: white;
+        color: #ffffff;
         opacity: 0;
         transition: 150ms all;
         transition-delay: 1.3s;
@@ -90,8 +217,6 @@ $primary: #ff0000;
                 background-color: transparent;
                 padding: 8px;
                 color: inherit;
-                width: 40px;
-                height: 40px;
                 border-radius: 50%;
                 display: flex;
                 justify-content: center;
@@ -100,15 +225,8 @@ $primary: #ff0000;
                 outline: none;
                 transition: 200ms ease-in;
 
-                svg {
-                    width: 100%;
-                    height: 100%;
-                }
-
                 @include responsive() {
                     padding: 4px;
-                    width: 30px;
-                    height: 30px;
                 }
 
                 &:hover,
@@ -165,11 +283,36 @@ $primary: #ff0000;
 
             .timeline-controller {
                 padding: 8px 12px 4px;
-                display: flex;
-                flex-wrap: wrap;
 
                 @include responsive() {
                     padding: 8px 8px 4px;
+                }
+
+                .timeline-slider-container {
+                    position: relative;
+                    display: flex;
+                    flex-wrap: wrap;
+                }
+
+                .jump-duration {
+                    position: absolute;
+                    bottom: calc(100% + 8px);
+                    padding: 2px 4px;
+                    border-radius: 4px;
+                    font-size: 80%;
+                    background-color: $secondary;
+                    color: var(--deepeshdg-secondary-text);
+                    opacity: 0;
+                    visibility: visible;
+                    transform: translate(-50%, 6px);
+                    transition: transform 150ms ease, opacity 150ms ease,
+                        visibility 150ms ease;
+
+                    &.visible {
+                        opacity: 1;
+                        visibility: visible;
+                        transform: translateX(-50%);
+                    }
                 }
 
                 .timeline-slider {
@@ -197,6 +340,16 @@ $primary: #ff0000;
                         box-shadow: -5000px 0px 0px 4990px
                             var(--deepeshdg-primary);
                         cursor: pointer;
+                    }
+
+                    &:hover {
+                        transform: scaleY(2);
+
+                        & ~ .jump-duration {
+                            opacity: 1;
+                            visibility: visible;
+                            transform: translateX(-50%);
+                        }
                     }
                 }
 

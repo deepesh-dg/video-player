@@ -64,6 +64,7 @@ export declare class VideoPlayer {
     toggleMute(): void;
     toggleFullScreen(): void;
     autoPlay(): void;
+    sendNotification(where: "top" | "center" | "centerLeft" | "centerRight" | "bottom", msg: string, timeout?: number): void;
     private _init;
     run(): this;
 }

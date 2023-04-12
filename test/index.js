@@ -3,8 +3,10 @@ const app = express();
 const path = require("path");
 const isReachable = require("is-reachable");
 const cors = require("cors");
+const ip = require("ip");
 
-const host = "127.0.0.1";
+const host = ip.address();
+const localhost = "127.0.0.1";
 let port = 3000;
 
 app.use(cors());
@@ -25,5 +27,8 @@ app.get("/", (req, res) => {
     }
     app.listen(port, host, () =>
         console.log(`Server running at http://${host}:${port}/`)
+    );
+    app.listen(port, localhost, () =>
+        console.log(`Server running at http://${localhost}:${port}/`)
     );
 })();

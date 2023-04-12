@@ -38,7 +38,33 @@ type Btn = {
         currentTime: HTMLElement | null;
         totalTime: HTMLElement | null;
     };
-    timeline?: HTMLInputElement | null;
+    timeline?: {
+        timeline?: HTMLInputElement | null;
+        jumpto?: HTMLDivElement | null;
+    };
+    notification?: {
+        container?: HTMLDivElement | null;
+        top?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+        center?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+        centerLeft?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+        centerRight?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+        bottom?: {
+            el?: HTMLDivElement | null;
+            on?: NodeJS.Timeout | null;
+        };
+    };
 };
 
 type Events = {
@@ -55,6 +81,42 @@ type Events = {
     // caption: Event;
     // pictureInPicture: Event;
 };
+
+function calcSliderPos(e: MouseEvent | TouchEvent | any) {
+    const el = e.target as HTMLInputElement;
+    if (
+        e.type == "touchstart" ||
+        e.type == "touchmove" ||
+        e.type == "touchend" ||
+        e.type == "touchcancel"
+    ) {
+        var touch =
+            e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
+        return {
+            mouseLocation: touch.pageX,
+            value:
+                (touch.pageX / el.clientWidth) *
+                parseInt(el.getAttribute("max") ?? "0", 10),
+        };
+    } else if (
+        e.type == "mousedown" ||
+        e.type == "mouseup" ||
+        e.type == "mousemove" ||
+        e.type == "mouseover" ||
+        e.type == "mouseout" ||
+        e.type == "mouseenter" ||
+        e.type == "mouseleave"
+    ) {
+        return {
+            mouseLocation: e.offsetX,
+            value:
+                (e.offsetX / el.clientWidth) *
+                parseInt(el.getAttribute("max") ?? "0", 10),
+        };
+    }
+
+    return { mouseLocation: 0, value: 0 };
+}
 
 export class VideoPlayer {
     private readonly classNames = {
@@ -101,6 +163,16 @@ export class VideoPlayer {
                 </svg>
             `,
         },
+        forward: `
+            <svg viewBox="0 0 512 512">
+                <path fill="currentColor" d="M500.5 231.4l-192-160C287.9 54.3 256 68.6 256 96v320c0 27.4 31.9 41.8 52.5 24.6l192-160c15.3-12.8 15.3-36.4 0-49.2zm-256 0l-192-160C31.9 54.3 0 68.6 0 96v320c0 27.4 31.9 41.8 52.5 24.6l192-160c15.3-12.8 15.3-36.4 0-49.2z"/>
+            </svg>
+        `,
+        backward: `
+            <svg viewBox="0 0 512 512">
+                <path fill="currentColor" d="M11.5 280.6l192 160c20.6 17.2 52.5 2.8 52.5-24.6V96c0-27.4-31.9-41.8-52.5-24.6l-192 160c-15.3 12.8-15.3 36.4 0 49.2zm256 0l192 160c20.6 17.2 52.5 2.8 52.5-24.6V96c0-27.4-31.9-41.8-52.5-24.6l-192 160c-15.3 12.8-15.3 36.4 0 49.2z"/>
+            </svg>
+        `,
     };
 
     /**
@@ -194,11 +266,17 @@ export class VideoPlayer {
                 this.totalTime >= 0 &&
                 this.btn.timeline
             ) {
-                this.btn.timeline.value = (
-                    (this.currentTime / this.totalTime) *
-                    100
-                ).toString();
+                if (this.btn.timeline.timeline)
+                    this.btn.timeline.timeline.value = (
+                        (this.currentTime / this.totalTime) *
+                        100
+                    ).toString();
             }
+
+            // if (this.btn.timeline?.timeline)
+            //     this.btn.timeline.timeline.step = Number(
+            //         100 / this.totalTime
+            //     ).toString();
         });
 
         this.on("play", (e) => {
@@ -210,6 +288,9 @@ export class VideoPlayer {
 
             if (this.video.paused) this.video.play();
             this.isPaused = this.video.paused;
+
+            if (!this.isPaused)
+                this.sendNotification("center", this.icons.play);
         });
 
         this.on("pause", (e) => {
@@ -218,12 +299,17 @@ export class VideoPlayer {
 
             if (!this.video.paused) this.video.pause();
             this.isPaused = this.video.paused;
+
+            if (this.isPaused)
+                this.sendNotification("center", this.icons.pause);
         });
 
         this.on("mute", () => {
             this.volumeLevel("muted");
             if (!this.video.muted) this.video.muted = true;
             this.isMuted = this.video.muted;
+
+            this.sendNotification("center", this.icons.volume.muted);
         });
 
         this.on("unmute", () => {
@@ -235,6 +321,8 @@ export class VideoPlayer {
 
             if (this.video.muted) this.video.muted = false;
             this.isMuted = this.video.muted;
+
+            this.sendNotification("top", `${Math.floor(this.volume * 100)}%`);
         });
 
         this.on("volume", () => {
@@ -266,6 +354,8 @@ export class VideoPlayer {
              */
             if (this.btn.volume?.slider)
                 this.btn.volume.slider.value = this.volume.toString();
+
+            this.sendNotification("top", `${Math.floor(this.volume * 100)}%`);
         });
 
         this.on("timeupdate", () => {
@@ -462,6 +552,35 @@ export class VideoPlayer {
         else this.pause();
     }
 
+    public sendNotification(
+        where: "top" | "center" | "centerLeft" | "centerRight" | "bottom",
+        msg: string,
+        timeout = 600
+    ) {
+        if (!this.btn.notification) return;
+        const el = this.btn.notification[where]?.el;
+        var on = this.btn.notification[where]?.on;
+        if (!el) return;
+
+        const hide = () => {
+            el.classList.remove("show");
+        };
+
+        const show = () => {
+            el.classList.add("show");
+        };
+
+        if (on) clearTimeout(on);
+
+        el.innerHTML = `<span>${msg}</span>`;
+        show();
+
+        this.btn.notification[where] = {
+            el: el,
+            on: setTimeout(hide, timeout),
+        };
+    }
+
     private _init() {
         const appendCSS = () => {
             this.video.style.width = "100%";
@@ -484,6 +603,61 @@ export class VideoPlayer {
 
             this.videoContainer.setAttribute("tabindex", "0");
 
+            /**
+             * Setting Up Notification
+             */
+            const notifications = this.document.createElement("div");
+            notifications.classList.add("notifications");
+            notifications.innerHTML = `
+                <div class="notification-container">
+                    <div class="top">
+                        <div class="notification"></div>
+                    </div>
+                    <div class="center">
+                        <div class="notification"></div>
+                    </div>
+                    <div class="centerLeft">
+                        <div class="notification"></div>
+                    </div>
+                    <div class="centerRight">
+                        <div class="notification"></div>
+                    </div>
+                    <div class="bottom">
+                        <div class="notification"></div>
+                    </div>
+                </div>
+            `;
+            this.videoContainer.appendChild(notifications);
+
+            this.btn.notification = {
+                container: notifications,
+                top: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".top .notification"
+                    ),
+                },
+                center: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".center .notification"
+                    ),
+                },
+                centerLeft: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".centerLeft .notification"
+                    ),
+                },
+                centerRight: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".centerRight .notification"
+                    ),
+                },
+                bottom: {
+                    el: notifications.querySelector<HTMLDivElement>(
+                        ".bottom .notification"
+                    ),
+                },
+            };
+
             this.volumeLevel("high");
         };
 
@@ -497,7 +671,10 @@ export class VideoPlayer {
                 <div class="mouse-event-zone"></div>
                 <div class="controllers">
                     <div class="timeline-controller">
-                        <input class="timeline-slider" type="range" min="0" max="100" step="any" value="0"/>
+                        <div class="timeline-slider-container">
+                            <input class="timeline-slider" type="range" min="0" max="100" step="1" value="0"/>
+                            <div class="jump-duration">0:00</div>
+                        </div>
                     </div>
                     <div class="controls">
                         <div class="left">
@@ -532,6 +709,9 @@ export class VideoPlayer {
                 </div>
             `;
 
+            /**
+             * Assigning Controllers
+             */
             this.btn.playPause = this.videoControlsContainer.querySelector(
                 ".icon-btn.play-pause-btn"
             );
@@ -543,7 +723,6 @@ export class VideoPlayer {
                     `input.volume-slider[type="range"]`
                 ),
             };
-
             this.btn.duration = {
                 currentTime:
                     this.videoControlsContainer.querySelector<HTMLElement>(
@@ -554,16 +733,19 @@ export class VideoPlayer {
                         ".total-time"
                     ),
             };
-
             this.btn.fullScreen =
                 this.videoControlsContainer.querySelector<HTMLElement>(
                     `.icon-btn.fullscreen-btn`
                 );
-
-            this.btn.timeline =
-                this.videoControlsContainer.querySelector<HTMLInputElement>(
-                    ".timeline-slider"
-                );
+            this.btn.timeline = {
+                timeline:
+                    this.videoControlsContainer.querySelector<HTMLInputElement>(
+                        ".timeline-slider"
+                    ),
+                jumpto: this.videoControlsContainer.querySelector<HTMLDivElement>(
+                    ".jump-duration"
+                ),
+            };
 
             this.videoContainer?.appendChild(this.videoControlsContainer);
         };
@@ -598,6 +780,20 @@ export class VideoPlayer {
         };
 
         const controllersEvents = () => {
+            const jumptoHandler = (e: Event, getValue = false) => {
+                const { mouseLocation, value } = calcSliderPos(e);
+                const duration: number = this.totalTime
+                    ? (this.totalTime * Number(value.toFixed(2))) / 100
+                    : 0;
+                if (this.btn.timeline?.jumpto) {
+                    this.btn.timeline.jumpto.textContent =
+                        this.formatDuration(duration);
+                    this.btn.timeline.jumpto.style.left = `${mouseLocation.toString()}px`;
+                }
+
+                if (getValue) return { mouseLocation, value };
+            };
+
             this.btn.playPause?.addEventListener("click", () =>
                 this.togglePlay()
             );
@@ -611,12 +807,27 @@ export class VideoPlayer {
                 this.setVolume(Number(target.value));
             });
 
-            this.btn.timeline?.addEventListener("input", (e) => {
+            this.btn.timeline?.timeline?.addEventListener("input", (e) => {
                 const target = e.target as HTMLInputElement;
                 this.currentTime =
                     (Number(this.totalTime) * Number(target.value)) / 100;
                 this.trigger("timeupdate");
+                if (this.btn.timeline?.jumpto) {
+                    this.btn.timeline.jumpto.textContent = this.formatDuration(
+                        this.currentTime
+                    );
+                }
             });
+
+            this.btn.timeline?.timeline?.addEventListener(
+                "touchmove",
+                jumptoHandler
+            );
+
+            this.btn.timeline?.timeline?.addEventListener(
+                "mousemove",
+                jumptoHandler
+            );
 
             this.btn.fullScreen?.addEventListener("click", () =>
                 this.toggleFullScreen()
@@ -661,16 +872,40 @@ export class VideoPlayer {
                         if (activeVideoValidate()) this.togglePlay();
                         break;
                     case "j":
-                        if (activeVideoValidate()) this.skip(-10);
+                        if (activeVideoValidate()) {
+                            this.skip(-10);
+                            this.sendNotification(
+                                "centerLeft",
+                                `10s${this.icons.backward}`
+                            );
+                        }
                         break;
                     case "l":
-                        if (activeVideoValidate()) this.skip(10);
+                        if (activeVideoValidate()) {
+                            this.skip(10);
+                            this.sendNotification(
+                                "centerRight",
+                                `${this.icons.forward}10s`
+                            );
+                        }
                         break;
                     case "arrowleft":
-                        if (activeVideoValidate()) this.skip(-5);
+                        if (activeVideoValidate()) {
+                            this.skip(-5);
+                            this.sendNotification(
+                                "centerLeft",
+                                `5s${this.icons.backward}`
+                            );
+                        }
                         break;
                     case "arrowright":
-                        if (activeVideoValidate()) this.skip(5);
+                        if (activeVideoValidate()) {
+                            this.skip(5);
+                            this.sendNotification(
+                                "centerRight",
+                                `${this.icons.forward}5s`
+                            );
+                        }
                         break;
                     case "arrowup":
                         if (activeVideoValidate()) this.setVolume(5, true);
