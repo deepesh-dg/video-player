@@ -2,6 +2,10 @@
 
 A frontend web video player.
 
+🏠 [Live Preview](https://video-player.deepeshdg.com/)
+
+---
+
 ## Installation
 
 CDN JavaScript
